@@ -1,439 +1,172 @@
-# Writing TensorFlow Documentation
+# 编写 TensorFlow 文档
 
-We welcome contributions to the TensorFlow documentation from the community.
-This document explains how you can contribute to that documentation. In
-particular, this document explains the following:
+我们欢迎社区对 TensorFlow 文档做贡献。这份文档说明了你可以怎样为 TensorFlow 文档做出贡献，特别地，这份文档对以下内容进行了说明：
 
-* Where the documentation is located.
-* How to make conformant edits.
-* How to build and test your documentation changes before you submit them.
+* 文档位于什么地方。
+* 怎样进行格式一致的编辑。
 
-You can view TensorFlow documentation on https://www.tensorflow.org, and you
-can view and edit the raw files on
-[GitHub](https://www.tensorflow.org/code/tensorflow/docs_src/).
-We're publishing our docs on GitHub so everybody can contribute. Whatever gets
-checked in to `tensorflow/docs_src` will be published soon after on
-https://www.tensorflow.org.
+你可以在 https://www.tensorflow.org 上查看 TensorFlow 文档，也可以在 [`site/en`](https://github.com/tensorflow/docs/tree/master/site/en) 文件夹下对应的路径中查看和编辑原始文件。
 
-Republishing TensorFlow documentation in different forms is absolutely allowed,
-but we are unlikely to accept other documentation formats (or the tooling to
-generate them) into our repository. If you do choose to republish our
-documentation in another form, please be sure to include:
+我们正在将这些文档发布到 GitHub 上，以便每个人都可以为之做贡献。所有经过核对编入 `tensorflow/docs/site/en` 的内容之后都会尽快地发布到 [tensorflow.org](https://www.tensorflow.org)。
 
-* The version of the API this represents (for example, r1.0, master, etc.)
-* The commit or version from which the documentation was generated
-* Where to get the latest documentation (that is, https://www.tensorflow.org)
-* The Apache 2.0 license.
+我们非常欢迎通过不同的形式重新发布 TensorFlow 文档，但我们不大可能允许让别的格式的文档（或者其他的文档生成工具）进入我们的代码仓库。如果你想以另外的格式重新发布我们的文档，请确保包含以下内容：
 
-## A note on versions
+* 这种格式的文档对应的 API 版本（例如 r1.0、master 等等）
+* 这份文档是从哪次提交或者哪个版本产生的
+* 从哪里（即 https://www.tensorflow.org）可以找到最新版本的文档
+* Apache 2.0 开源许可协议
 
-tensorflow.org, at root, shows documentation for the latest stable binary.  This
-is the documentation you should be reading if you are using `pip` to install
-TensorFlow.
+## 版本与分支
 
-However, most developers will contribute documentation into the master GitHub
-branch, which is published, occasionally,
-at [tensorflow.org/versions/master](https://www.tensorflow.org/versions/master).
+在 [tensorflow.org](https://www.tensorflow.org) 网站的根目录下有  Tensorflow 最新稳定版的文档。如果你要用 `pip` 命令来安装 TensorFlow，你应该阅读这份文档。
 
-If you want documentation changes to appear at root, you will need to also
-contribute that change to the current stable binary branch (and/or
-[cherrypick](https://stackoverflow.com/questions/9339429/what-does-cherry-picking-a-commit-with-git-mean)).
+默认的 TnesorFlow pip 包是由 [TensorFlow 主仓库](https://github.com/tensorflow/tensorflow/)的代码构建而成的。
 
-## Reference vs. non-reference documentation
+此外，为了快速迭代更新，本网站的文档由 [`docs/master` 分支](https://github.com/tensorflow/docs/blob/master/site/en/)构建。
 
-The following reference documentation is automatically generated from comments
-in the code:
+老版本的文档可以在名为 `rX.X` 的分支中查看。所有老版本分支都是在新版本发布时创建的。比如我们会在 `r1.11` 发布时创建 `r1.10` 分支。
 
-- C++ API reference docs
-- Java API reference docs
-- Python API reference docs
+少数情况下，有一些新的特性我们没有能够及时加入本网站中，此时文档会在一个特征分支中进行完善，并在完成时尽快并入主分支。
 
-To modify the reference documentation, you edit the appropriate code comments.
+## API 文档
 
-Non-reference documentation (for example, the TensorFlow installation guides) is
-authored by humans. This documentation is located in the
-[`tensorflow/docs_src`](https://www.tensorflow.org/code/tensorflow/docs_src/)
-directory.  Each subdirectory of `docs_src` contains a set of related TensorFlow
-documentation. For example, the TensorFlow installation guides are all in the
-`docs_src/install` directory.
+以下几种参考文档是由代码中的注释自动生成的：
 
-The C++ documentation is generated from XML files generated via doxygen;
-however, those tools are not available in open source at this time.
+- C++ API 参考文档
+- Java API 参考文档
+- Python API 参考文档
 
-## Markdown
+如果想修改参考文档，你需要编辑对应代码的注释。由于这些参考文档的内容需要与默认的安装版本一直，因此它们仅会随着最新发布的版本进行更新。
 
-Editable TensorFlow documentation is written in Markdown. With a few exceptions,
-TensorFlow uses
-the [standard Markdown rules](https://daringfireball.net/projects/markdown/).
+Python 的 API 文档是由 tensorflow 的主代码库生成的，使用 bazel 对 `//tensorflow/tools/docs:generate` 进行构建：
 
-This section explains the primary differences between standard Markdown rules
-and the Markdown rules that editable TensorFlow documentation uses.
-
-### Math in Markdown
-
-You may use MathJax within TensorFlow when editing Markdown files, but note the
-following:
-
-- MathJax renders properly on [tensorflow.org](https://www.tensorflow.org)
-- MathJax does not render properly on [github](https://github.com/tensorflow/tensorflow).
-
-When writing MathJax, you can use <code>&#36;&#36;</code> and `\\(` and `\\)` to
-surround your math.  <code>&#36;&#36;</code> guards will cause line breaks, so
-within text, use `\\(` `\\)` instead.
-
-### Links in Markdown
-
-Links fall into a few categories:
-
-- Links to a different part of the same file
-- Links to a URL outside of tensorflow.org
-- Links from a Markdown file (or code comments) to another file within tensorflow.org
-
-For the first two link categories, you may use standard Markdown links, but put
-the link entirely on one line, rather than splitting it across lines. For
-example:
-
-- `[text](link)    # Good link`
-- `[text]\n(link)  # Bad link`
-- `[text](\nlink)  # Bad link`
-
-For the final link category (links to another file within tensorflow.org),
-please use a special link parameterization mechanism. This mechanism enables
-authors to move and reorganize files without breaking links.
-
-The parameterization scheme is as follows.  Use:
-
-<!-- Note: the use of &#64; is a hack so we don't translate these as symbols -->
-- <code>&#64;{tf.symbol}</code> to make a link to the reference page for a
-  Python symbol.  Note that class members don't get their own page, but the
-  syntax still works, since <code>&#64;{tf.MyClass.method}</code> links to the
-  proper part of the tf.MyClass page.
-
-- <code>&#64;{tensorflow::symbol}</code> to make a link to the reference page
-  for a C++ symbol.
-
-- <code>&#64;{$doc_page}</code> to make a link to another (not an API reference)
-    doc page. To link to
-
-    - `red/green/blue/index.md` use <code>&#64;{$blue}</code> or
-      <code>&#64;{$green/blue}</code>,
-
-    - `foo/bar/baz.md` use <code>&#64;{$baz}</code> or
-      <code>&#64;{$bar/baz}</code>.
-
-    The shorter one is preferred, so we can move pages around without breaking
-    these references. The main exception is that the Python API guides should
-    probably be referred to using <code>&#64;{$python/<guide-name>}</code> to
-    avoid ambiguity.
-
-- <code>&#64;{$doc_page#anchor-tag$link-text}</code> to link to an anchor in
-    that doc and use different link text (by default, the link text is the title
-    of the target page).
-
-    To override the link text only, omit  the `#anchor-tag`.
-
-To link to source code, use a link starting with:
-`https://www.tensorflow.org/code/`, followed by
-the file name starting at the github root. For instance, a link to the file you
-are currently reading should be written as
-`https://www.tensorflow.org/code/tensorflow/docs_src/community/documentation.md`.
-
-This URL naming scheme ensures
-that [tensorflow.org](https://www.tensorflow.org/) can forward the link to the
-branch of the code corresponding to the version of the documentation you're
-viewing. Do not include url parameters in the source code URL.
-
-## Generating docs and previewing links
-
-Before building the documentation, you must first set up your environment by
-doing the following:
-
-1. If pip isn't installed on your machine, install it now by issuing the
-following command:
-
-        $ sudo easy_install pip
-
-2. Use pip to install codegen, mock, and pandas by issuing the following
-   command (Note: If you are using
-   a [virtualenv](https://virtualenv.pypa.io/en/stable/) to manage your
-   dependencies, you may not want to use sudo for these installations):
-
-        $ sudo pip install codegen mock pandas
-
-3. If bazel is not installed on your machine, install it now. If you are on
-   Linux, install bazel by issuing the following command:
-
-        $ sudo apt-get install bazel  # Linux
-
-    If you are on Mac OS, find bazel installation instructions on
-    [this page](https://bazel.build/versions/master/docs/install.html#mac-os-x).
-
-4. Change directory to the top-level `tensorflow` directory of the TensorFlow
-   source code.
-
-5. Run the `configure` script and answer its prompts appropriately for your
-   system.
-
-        $ ./configure
-
-Then, change to the `tensorflow` directory which contains `docs_src` (`cd
-tensorflow`).  Run the following command to compile TensorFlow and generate the
-documentation in the `/tmp/tfdocs` dir:
-
-    bazel run tools/docs:generate -- \
-              --src_dir="$(pwd)/docs_src/" \
-              --output_dir=/tmp/tfdocs/
-
-Note: You must set `src_dir` and `output_dir` to absolute file paths.
-
-## Generating Python API documentation
-
-Ops, classes, and utility functions are defined in Python modules, such as
-`image_ops.py`. Python modules contain a module docstring. For example:
-
-```python
-"""Image processing and decoding ops."""
+```sh
+bazel run //tensorflow/tools/docs:generate -- --output_dir=/tmp/master_out
 ```
 
-The documentation generator places this module docstring at the beginning of the
-Markdown file generated for the module, in this
-case, [tf.image](https://www.tensorflow.org/api_docs/python/tf/image).
+C++ 的 API 文档是由 doxygen 产生的 XML 文件生成的，不过此工具暂未开源。
 
-It used to be a requirement to list every member of a module inside the module
-file at the beginning, putting a `@@` before each member. The `@@member_name`
-syntax is deprecated and no longer generates any docs. But depending on how a
-module is [sealed](#sealing_modules) it may still be necessary to mark the
-elements of the module’s contents as public. The called-out op, function, or
-class does not have to be defined in the same file. The next few sections of
-this document discuss sealing and how to add elements to the public
-documentation.
+## Markdown 与 Notebook
 
-The new documentation system automatically documents public symbols, except for
-the following:
+TensorFlow 的文档是由 Markdown（`.md`）或者 Notebook（`.ipynb`）编写的。除少数情况外，TensorFlow 文档遵循[标准 Markdown 规则](https://daringfireball.net/projects/markdown/)。
 
-- Private symbols whose names start with an underscore.
-- Symbols originally defined in `object` or protobuf’s `Message`.
-- Some class members, such as `__base__`, `__class__`, which are dynamically
-  created but generally have no useful documentation.
+这一节介绍标准 Markdown 语法规则和可编辑的 TensorFlow 文档中使用的 Markdown 语法规则之间的主要差异。
 
-Only top level modules (currently just `tf` and `tfdbg`) need to be manually
-added to the generate script.
+### Markdown 中的数学公式
 
-### Sealing modules
+在编辑 Markdown 文件时，你可以在 TensorFlow 中使用 MathJax，但是需要注意以下几点：
 
-Because the doc generator walks all visible symbols, and descends into anything
-it finds, it will document any accidentally exposed symbols. If a module only
-exposes symbols that are meant to be part of the public API, we call it
-**sealed**. Because of Python’s loose import and visibility conventions, naively
-written Python code will inadvertently expose a lot of modules which are
-implementation details. Improperly sealed modules may expose other unsealed
-modules, which will typically lead the doc generator to fail. **This failure is
-the intended behavior.** It ensures that our API is well defined, and allows us
-to change implementation details (including which modules are imported where)
-without fear of accidentally breaking users.
+- MathJax 可以在 [tensorflow.org](https://www.tensorflow.org) 上正确地渲染
+- MathJax 可能在 [github](https://github.com/tensorflow/tensorflow) 上无法正确地渲染。
 
-If a module is accidentally imported, it typically breaks the doc generator
-(`generate_test`). This is a clear sign you need to seal your modules. However,
-even if the doc generator succeeds, unwanted symbols may show up in the
-docs. Check the generated docs to make sure that all symbols that are documented
-are expected. If there are symbols that shouldn’t be there, you have the
-following options for dealing with them:
+在写 MathJax 的时候，你可以使用 <code>&#36;&#36;</code> 和 `\\(`、`\\)` 将数学公式包起来。<code>&#36;&#36;</code> 会导致会换行，所以在文本行内使用 `\\(`、`\\)`。
 
-- Private symbols and imports
-- The `remove_undocumented` filter
-- A traversal blacklist.
+### Markdown 中的链接
 
-We'll discuss these options in detail below.
+链接可以分为几种类型：
 
-#### Private symbols and imports
+- 指向文档库中其它文档的链接
+- 指向 API 文档的链接
+- 其它的链接
 
-The easiest way to conform to the API sealing expectations is to make non-public
-symbols private (by prepending an underscore _). The doc generator respects
-private symbols. This also applies to modules. If the only problem is that there
-is a small number of imported modules that show up in the docs (or break the
-generator), you can simply rename them on import, e.g.: `import sys as _sys`.
+对于指向文档库中其它文档的链接，使用相对链接路径，比如：`[Eager Basics](../tutorials/eager/eager_basics.ipynb)` 会产生 [Eager Basics](../tutorials/eager/eager_basics.ipynb) 链接。这些链接在 github 与 tensorflow.org 中都能正常使用。
 
-Because Python considers all files to be modules, this applies to files as
-well. If you have a directory containing the following two files/modules:
+API 链接会在文档网站发布时进行转换。生成指向 Python API 的链接仅需在反引号内输入完整的符号路径即可：\`tf.data.Dataset\` 会产生 `tf.data.Dataset` 链接。生成指向 C++ API 的链接需要使用命名空间路径，比如 \`tensorflow::Tensor\` 会产生 `tensorflow::Tensor` 链接。
 
-    module/__init__.py
-    module/private_impl.py
+对于其它不在 `tensorflow/docs` 仓库中，指向 tensorflow.org 的链接（包括 [ecosystem](https://tensorflow.org/ecosystem) 中的全部链接），直接用标准 markdown 语法填入完整的 URL 即可。
 
-Then, after `module` is imported, it will be possible to access
-`module.private_impl`. Renaming `private_impl.py` to `_private_impl.py` solves
-the problem. If renaming modules is awkward, read on.
+对于指向源码的链接，使用以 `https://www.tensorflow.org/code/` 开头的链接，后面接上以 github 仓库根目录开始的文件名即可。
 
-#### Use the `remove_undocumented` filter
+以上的 URL 指南可以确保 [tensorflow.org](https://www.tensorflow.org/) 网站根据用户正在浏览的文档版本正确地指向相应源码。在指向源码的链接中不要加入任何 url 参数。
 
-Another way to seal a module is to split your implementation from the API. To do
-so, consider using `remove_undocumented`, which takes a list of allowed symbols,
-and deletes everything else from the module. For example, the following snippet
-demonstrates how to put `remove_undocumented` in the `__init__.py` file for a
-module:
+## 操作（op）文档样式指南
 
-__init__.py:
+模块级别的、很长的、描述性的文档应该在 `docs_src/api_guides/python` 的 API 指南中。
 
-    # Use * imports only if __all__ defined in some_file
-    from tensorflow.some_module.some_file import *
+在一般情况下，类（class）和操作（op）的文档会按照顺序提供以下信息：
 
-    # Otherwise import symbols directly
-    from tensorflow.some_module.some_other_file import some_symbol
+* 用一个简短的句子描述操作（op）作用。
+* 简短描述传递参数给操作（op）时会发生什么。
+* 一个显示操作（op）如何工作的示例（最好有伪代码）。
+* 要求、注意事项、重要说明（如果有的话）。
+* 对操作（op）构造函数的输入、输出、Attrs 或其他参数的描述。
 
-    from tensorflow.python.util.all_util import remove_undocumented
+上述每一项都在[下面](#文档字符串章节的描述)有更详细的描述。
 
-    _allowed_symbols = [‘some_symbol’, ‘some_other_symbol’]
+请使用 Markdown 来写文档。基本语法请参考[此文档](https://daringfireball.net/projects/markdown/)。你也可以使用 [MathJax](https://www.mathjax.org) 符号来写公式（见上文有关限制）。
 
-    remove_undocumented(__name__, allowed_exception_list=_allowed_symbols)
+### 关于代码的写法
 
-The `@@member_name` syntax is deprecated, but it still exists in some places in
-the documentation as an indicator to `remove_undocumented` that those symbols
-are public. All `@@`s will eventually be removed. If you see them, however,
-please do not randomly delete them as they are still in use by some of our
-systems.
+在文本中书写以下内容时需要用反引号包起来：
 
-#### Traversal blacklist
+* 参数名（例如 `input`、`x`、`tensor`）
+* 返回的张量名（例如 `output`、`idx`、`out`）
+* 数据类型（例如 `int32`、`float`、`uint8`）
+* 文本中引用的其他操作（op）名（例如 `list_diff()`、`shuffle()`）
+* 类（class）名（例如使用 `Tensor`，实际上你用它来表示一个 `Tensor` 对象；如果你只是要解释一个操作（op）要对一个张量、一幅图做什么，或者是要解释某种一般的操作，不要大写或使用反单引号。
+* 文件名（例如 `image_ops.py` 或 `/path-to-your-data/xml/example-name`）
+* 数学表达式或条件（例如 `-1-input.dims() <= dim <= input.dims()`）
 
-If all else fails, you may add entries to the traversal blacklist in
-`generate_lib.py.` **Almost all entries in this list are an abuse of its
-purpose; avoid adding to it if you can!**
-
-The traversal blacklist maps qualified module names (without the leading `tf.`)
-to local names that are not to be descended into. For instance, the following
-entry will exclude `some_module` from traversal.
-
-    { ...
-      ‘contrib.my_module’: [‘some_module’]
-      ...
-    }
-
-That means that the doc generator will show that `some_module` exists, but it
-will not enumerate its content.
-
-This blacklist was originally intended to make sure that system modules (mock,
-flags, ...) included for platform abstraction can be documented without
-documenting their interior. Its use beyond this purpose is a shortcut that may
-be acceptable for contrib, but not for core tensorflow.
-
-## Op documentation style guide
-
-Long, descriptive module-level documentation for modules should go in the API
-Guides in `docs_src/api_guides/python`.
-
-For classes and ops, ideally, you should provide the following information, in
-order of presentation:
-
-* A short sentence that describes what the op does.
-* A short description of what happens when you pass arguments to the op.
-* An example showing how the op works (pseudocode is best).
-* Requirements, caveats, important notes (if there are any).
-* Descriptions of inputs, outputs, and Attrs or other parameters of the op
-  constructor.
-
-Each of these is described in more
-detail [below](#description-of-the-docstring-sections).
-
-Write your text in Markdown format. A basic syntax reference
-is [here](https://daringfireball.net/projects/markdown/). You are allowed to
-use [MathJax](https://www.mathjax.org) notation for equations (see above for
-restrictions).
-
-### Writing about code
-
-Put backticks around these things when they're used in text:
-
-* Argument names (for example, `input`, `x`, `tensor`)
-* Returned tensor names (for example, `output`, `idx`, `out`)
-* Data types (for example, `int32`, `float`, `uint8`)
-* Other op names referenced in text (for example, `list_diff()`, `shuffle()`)
-* Class names (for example, `Tensor` when you actually mean a `Tensor` object;
-  don't capitalize or use backticks if you're just explaining what an op does to
-  a tensor, or a graph, or an operation in general)
-* File names (for example, `image_ops.py`, or
-  `/path-to-your-data/xml/example-name`)
-* Math expressions or conditions (for example, `-1-input.dims() <= dim <=
-  input.dims()`)
-
-Put three backticks around sample code and pseudocode examples. And use `==>`
-instead of a single equal sign when you want to show what an op returns. For
-example:
+用三个反单引号样例代码和伪代码示例包起来。并使用 `# ==>` 而非等号来表达一个操作（op）将返回什么。例如：
 
     ```
     # 'input' is a tensor of shape [2, 3, 5]
-    (tf.expand_dims(input, 0)) ==> [1, 2, 3, 5]
+    (tf.expand_dims(input, 0))  # ==> [1, 2, 3, 5]
     ```
 
-If you're providing a Python code sample, add the python style label to ensure
-proper syntax highlighting:
+如果你要提供一个 Python 的示例代码，请添加 Python 风格标签以确保使用合适的语法高亮：
 
-    ```python
+    ``` python
     # some Python code
     ```
 
-Two notes about backticks for code samples in Markdown:
+Markdown 中关于示例代码反单引号的两点说明：
 
-1. You can use backticks for pretty printing languages other than Python, if
-   necessary. A full list of languages is available
-   [here](https://github.com/google/code-prettify#how-do-i-specify-the-language-of-my-code).
-2. Markdown also allows you to indent four spaces to specify a code sample.
-   However, do NOT indent four spaces and use backticks simultaneously. Use one
-   or the other.
+1. 如果有必要的话，你可以使用反单引号来美观地显示除 Python 外的其他语言，[这里](https://github.com/google/code-prettify#how-do-i-specify-the-language-of-my-code)有一份可用语言的完整列表。
 
-### Tensor dimensions
+2. Markdown 也允许你使用四个空格的缩进来指示一段代码示例。但是，请一定不要同时使用四个空格缩进和反单引号。只使用其中的一个。
 
-When you're talking about a tensor in general, don't capitalize the word tensor.
-When you're talking about the specific object that's provided to an op as an
-argument or returned by an op, then you should capitalize the word Tensor and
-add backticks around it because you're talking about a `Tensor` object.
+### 张量维度
 
-Don't use the word `Tensors` to describe multiple Tensor objects unless you
-really are talking about a `Tensors` object. Better to say "a list of `Tensor`
-objects."
+当你提及一般的张量（tensor）时，不要大写这个词的首字母。当你在提及作为参数提供给操作（op）或由操作 (op) 返回的特定对象时，你应该使用 Tensor 这个词，并在其周围添加反单引号，因为你提及的是一个 `Tensor` 对象。
 
-Use the term "dimension" to refer to the size of a tensor. If you need to be
-specific about the size, use these conventions:
+不要使用 `Tensors` 这个词来表示多个 Tensor 对象，除非你真的在谈论一个 `Tensors` 对象。更好的说法是“许多 `Tensor` 对象（a list of `Tensor` objects）”。
 
-- Refer to a scalar as a "0-D tensor"
-- Refer to a vector as a "1-D tensor"
-- Refer to a matrix as a "2-D tensor"
-- Refer to tensors with 3 or more dimensions as 3-D tensors or n-D tensors. Use
-  the word "rank" only if it makes sense, but try to use "dimension" instead.
-  Never use the word "order" to describe the size of a tensor.
+使用术语“维度”来表示张量的大小。如果您需要指定具体的大小，请使用以下约定：
 
-Use the word "shape" to detail the dimensions of a tensor, and show the shape in
-square brackets with backticks. For example:
+- 标量表示“0 维张量”
+- 向量表示“1 维张量”
+- 矩阵表示“2 维张量”
+- 张量表示“3 维张量”或“n 维张量”。“秩”这个词真正有用的时候再用，不然就用维度。永远不要用“阶数”这个词来描述张量的大小。
 
-    If `input` is a 3-D tensor with shape `[3, 4, 3]`, this operation
-    returns a 3-D tensor with shape `[6, 8, 6]`.
+使用“形状”（shape）这个词来具体说明张量的维度，并用一对方括号来展示一个张量的形状。例如：
 
-### Ops defined in C++
+    如果 `input` 是一个形状为 `[3, 4, 3]` 的三维张，则这个操作会返回一个形状为 `[6, 8, 6]` 的三维张量。
 
-All Ops defined in C++ (and accessible from other languages) must be documented
-with a `REGISTER_OP` declaration. The docstring in the C++ file is processed to
-automatically add some information for the input types, output types, and Attr
-types and default values.
+### C++ 中定义的操作（op）
 
-For example:
+所有在 C++ 中定义的操作（并且可以通过其他语言访问）必须用 `REGISTER_OP` 声明进行记录。C++ 文件中的文档字符串会自动进行处理，为输入类型、输出类型和 Attr 类型以及默认值添加相关信息。
 
-    ```c++
-    REGISTER_OP("PngDecode")
-      .Input("contents: string")
-      .Attr("channels: int = 0")
-      .Output("image: uint8")
-      .Doc(R"doc(
-    Decodes the contents of a PNG file into a uint8 tensor.
+例如：
 
-    contents: PNG file contents.
-    channels: Number of color channels, or 0 to autodetect based on the input.
-      Must be 0 for autodetect, 1 for grayscale, 3 for RGB, or 4 for RGBA.
-      If the input has a different number of channels, it will be transformed
-      accordingly.
-    image:= A 3-D uint8 tensor of shape `[height, width, channels]`.
-      If `channels` is 0, the last dimension is determined
-      from the png contents.
-    )doc");
-    ```
+```c++
+REGISTER_OP("PngDecode")
+  .Input("contents: string")
+  .Attr("channels: int = 0")
+  .Output("image: uint8")
+  .Doc(R"doc(
+Decodes the contents of a PNG file into a uint8 tensor.
 
-Results in this piece of Markdown:
+contents: PNG file contents.
+channels: Number of color channels, or 0 to autodetect based on the input.
+  Must be 0 for autodetect, 1 for grayscale, 3 for RGB, or 4 for RGBA.
+  If the input has a different number of channels, it will be transformed accordingly.
+image:= A 3-D uint8 tensor of shape `[height, width, channels]`.
+  If `channels` is 0, the last dimension is determined from the png contents.
+)doc");
+```
+
+会输出以下 Markdown：
 
     ### tf.image.png_decode(contents, channels=None, name=None) {#png_decode}
 
@@ -441,143 +174,113 @@ Results in this piece of Markdown:
 
     #### Args:
 
-    *  <b>contents</b>: A string Tensor. PNG file contents.
-    *  <b>channels</b>: An optional int. Defaults to 0.
+    *  **contents**: A string Tensor. PNG file contents.
+    *  **channels**: An optional int. Defaults to 0.
        Number of color channels, or 0 to autodetect based on the input.
-       Must be 0 for autodetect, 1 for grayscale, 3 for RGB, or 4 for RGBA.  If the
-       input has a different number of channels, it will be transformed accordingly.
-    *  <b>name</b>: A name for the operation (optional).
+       Must be 0 for autodetect, 1 for grayscale, 3 for RGB, or 4 for RGBA. If the input has a different number of channels, it will be transformed accordingly.
+    *  **name**: A name for the operation (optional).
 
     #### Returns:
-    A 3-D uint8 tensor of shape `[height, width, channels]`.  If `channels` is
-    0, the last dimension is determined from the png contents.
+    A 3-D uint8 tensor of shape `[height, width, channels]`.  If `channels` is 0, the last dimension is determined from the png contents.
 
-Much of the argument description is added automatically. In particular, the doc
-generator automatically adds the name and type of all inputs, attrs, and
-outputs. In the above example, `<b>contents</b>: A string Tensor.` was added
-automatically. You should write your additional text to flow naturally after
-that description.
+大多数的参数描述都是被自动添加的。需要注意的是，文档生成器会自动为所有的输入、属性和输出添加名称和类型。在上面的例子中，`contents: A string Tensor.` 是自动添加的。你应该使用一些额外的文本来让描述更加自然。
 
-For inputs and output, you can prefix your additional text with an equal sign to
-prevent the automatically added name and type. In the above example, the
-description for the output named `image` starts with `=` to prevent the addition
-of `A uint8 Tensor.` before our text `A 3-D uint8 Tensor...`. You cannot prevent
-the addition of the name, type, and default value of attrs this way, so write
-your text carefully.
+对于输入和输出，你可以在额外添加的文字前加等号来避免生成器自动添加名称和类型。在上面的例子中，描述中名为 `image` 的输出需要在开头加上 `=`，以免生成器自动在文字 `A 3-D uint8 Tensor...` 前添加 `A uint8 Tensor.`。你不能通过这种方式来避免添加属性的名称、类型和默认值，因此要小心书写这些额外的文本。
 
-### Ops defined in Python
+### Python 中定义的操作（op）
 
-If your op is defined in a `python/ops/*.py` file, then you need to provide text
-for all of the arguments and output (returned) tensors. The doc generator does
-not auto-generate any text for ops that are defined in Python, so what you write
-is what you get.
+如果你的操作（op）是在 `python/ops/*.py` 文件中定义的，则需要为所有参数和输出（返回值）张量提供描述文本。文档成器不会对 Python 中定义的操作（op）的任何文本进行自动生成，所以你写什么就会得到什么。
 
-You should conform to the usual Python docstring conventions, except that you
-should use Markdown in the docstring.
+你应该遵守常见的 Python 文档字符串的约定，但您应该在文档字符串中使用 Markdown 语法格式。
 
-Here's a simple example:
+以下是一个简单的例子：
 
-```python
-def foo(x, y, name="bar"):
-  """Computes foo.
+    def foo(x, y, name="bar"):
+      """Computes foo.
 
-  Given two 1-D tensors `x` and `y`, this operation computes the foo.
+      Given two 1-D tensors `x` and `y`, this operation computes the foo.
 
-  Example:
+      Example:
 
-  ```
-  # x is [1, 1]
-  # y is [2, 2]
-  tf.foo(x, y) ==> [3, 3]
-  ```
-  Args:
-    x: A `Tensor` of type `int32`.
-    y: A `Tensor` of type `int32`.
-    name: A name for the operation (optional).
+      ```
+      # x is [1, 1]
+      # y is [2, 2]
+      tf.foo(x, y) ==> [3, 3]
+      ```
+      Args:
+        x: A `Tensor` of type `int32`.
+        y: A `Tensor` of type `int32`.
+        name: A name for the operation (optional).
 
-  Returns:
-    A `Tensor` of type `int32` that is the foo of `x` and `y`.
+      Returns:
+        A `Tensor` of type `int32` that is the foo of `x` and `y`.
 
-  Raises:
-    ValueError: If `x` or `y` are not of type `int32`.
-  """
-```
+      Raises:
+        ValueError: If `x` or `y` are not of type `int32`.
+      """
 
-## Description of the docstring sections
+## 文档字符串章节的描述
 
-This section details each of the elements in docstrings.
+本节会详细介绍文档字符串中的每个元素。
 
-### Short sentence describing what the op does
+### 描述操作（op）是做什么的短句
 
-Examples:
+示例：
 
 ```
-Concatenates tensors.
+拼接张量。
 ```
 
 ```
-Flips an image horizontally from left to right.
+从左向右水平翻转一幅图像。
 ```
 
 ```
-Computes the Levenshtein distance between two sequences.
+计算两个序列之间的 Levenshtein 距离。
 ```
 
 ```
-Saves a list of tensors to a file.
+将一些张量保存到一个文件中。
 ```
 
 ```
-Extracts a slice from a tensor.
+从一个张量中提取一些切片。
 ```
 
-### Short description of what happens when you pass arguments to the op
+### 对传递参数给这个操作（op）后会发生什么的简要描述
 
-Examples:
+示例：
 
-    Given a tensor input of numerical type, this operation returns a tensor of
-    the same type and size with values reversed along dimension `seq_dim`. A
-    vector `seq_lengths` determines which elements are reversed for each index
-    within dimension 0 (usually the batch dimension).
+    给定一个数值类型的张量输入，这个操作会返回一个相同类型和大小但是值会按照 `seq_dim` 维度逆序的张量。向量 `seq_lengths` 确定维度 0（通常是 batch 对应的维度）内的每个索引都逆序了哪些元素。
+
+    这一操作会返回一个类型为 `dtype`、维度为 `shape` 的张量，并且所有的元素都被置为 0。
 
 
-    This operation returns a tensor of type `dtype` and dimensions `shape`, with
-    all elements set to zero.
+### 对操作（op）进行举例说明
 
-### Example demonstrating the op
+好的代码示例既简短也易于理解，通常包含一个简短的代码段用以阐明示例在说明什么。当操作（op）是对一个 Tensor 的形状进行操作时，在示例中分别写出操作前和操作后的张量是非常有用的。
 
-Good code samples are short and easy to understand, typically containing a brief
-snippet of code to clarify what the example is demonstrating. When an op
-manipulates the shape of a Tensor it is often useful to include an example of
-the before and after, as well.
+`squeeze()` 操作有一个非常好的伪代码示例：
 
-The `squeeze()` op has a nice pseudocode example:
-
-    # 't' is a tensor of shape [1, 2, 1, 3, 1, 1]
+    # 't' 是一个形状为 [1, 2, 1, 3, 1, 1] 的张量
     shape(squeeze(t)) ==> [2, 3]
 
-The `tile()` op provides a good example in descriptive text:
+`tile()` 操作在描述性文本方面提供了一个很好的样例：
 
-    For example, tiling `[a, b, c, d]` by `[2]` produces `[a b c d a b c d]`.
+    例如，用 `[2]` 对 `[a, b, c, d]` 进行 `tile()` 操作会产生 `[a b c d a b c d]`。
 
-It is often helpful to show code samples in Python. Never put them in the C++
-Ops file, and avoid putting them in the Python Ops doc. We recommend, if
-possible, putting code samples in the
-[API guides](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/docs_src/api_guides).
-Otherwise, add them to the module or class docstring where the Ops constructors
-are called out.
+最好使用 Python 来书写示例代码。永远不要将它们放到 C++ 的操作文件中，并且也要避免将它们放到 Python 的操作文档中。我们推荐尽可能地将示例代码放入 [API 指南](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/docs_src/api_guides)中。或者，将它们添加到调用操作构造函数的模块或者类的文档字符串中。
 
-Here's an example from the module docstring in `api_guides/python/math_ops.md`:
+以下为 `api_guides/python/math_ops.md` 模块级文档字符串的示例：
 
-    ## Segmentation
+    ## 分割
 
-    TensorFlow provides several operations that you can use to perform common
-    math computations on tensor segments.
+    TensorFlow 有多种操作方式让你在张量分割时进行各种数学运算。
     ...
-    In particular, a segmentation of a matrix tensor is a mapping of rows to
-    segments.
+    特别地，对矩阵张量的分割操作是一个矩阵的各行到分割片段的映射。
 
-    For example:
+
+    例如：
 
     ```python
     c = tf.constant([[1,2,3,4], [-1,-2,-3,-4], [5,6,7,8]])
@@ -586,65 +289,51 @@ Here's an example from the module docstring in `api_guides/python/math_ops.md`:
             [5 6 7 8]]
     ```
 
-### Requirements, caveats, important notes
+### 要求、注意事项、重要说明
 
-Examples:
-
-```
-This operation requires that: `-1-input.dims() <= dim <= input.dims()`
-```
+示例：
 
 ```
-Note: This tensor will produce an error if evaluated. Its value must
-be fed using the `feed_dict` optional argument to `Session.run()`,
-`Tensor.eval()`, or `Operation.run()`.
-```
-
-### Descriptions of arguments and output (returned) tensors.
-
-Keep the descriptions brief and to the point. You should not have to explain how
-the operation works in the argument sections.
-
-Mention if the Op has strong constraints on the dimensions of the input or
-output tensors. Remember that for C++ Ops, the type of the tensor is
-automatically added as either as "A ..type.. Tensor" or "A Tensor with type in
-{...list of types...}". In such cases, if the Op has a constraint on the
-dimensions either add text such as "Must be 4-D" or start the description with
-`=` (to prevent the tensor type to be added) and write something like "A 4-D
-float tensor".
-
-For example, here are two ways to document an image argument of a C++ op (note
-the "=" sign):
-
-```
-image: Must be 4-D. The image to resize.
+这个操作要求 `-1-input.dims() <= dim <= input.dims()`
 ```
 
 ```
-image:= A 4-D `float` tensor. The image to resize.
+说明：如果对这个张量求值会产生错误。它的值必须使用 `Session.run()`、`Tensor.eval()` 或 `Operation.run()` 的可选参数 `feed_dict` 导入 。
 ```
 
-In the documentation, these will be rendered to markdown as
+### 对参数和输出（返回）张量的描述
+
+要保证描述言简意赅。在参数部分无须介绍这个操作的工作原理。
+
+如果这个操作对输入张量或输出张量的维度有强制要求，需要在此处提及。请记住，对于 C++ 操作，张量的类型是自动添加的，例如“A ..type .. Tensor”或“一个类型为 {...list of types...} 的 Tensor”。在这种情况下，如果操作对张量的维度有约束，则可以添加诸如“必须为 4 维”的文本，或者在开头用 `=`（为了防止添加张量类型）进行描述，例如写上“一个 4 维的 float 张量”。
+
+例如，以下描述了两种对一个 C++ 操作中 image 参数进行记录的方式（注意 “=” 号）：
 
 ```
-image: A `float` Tensor. Must be 4-D. The image to resize.
+image: 要进行调整尺寸的图像。必须为 4 维。
 ```
 
 ```
-image: A 4-D `float` Tensor. The image to resize.
+image:= 要进行调整尺寸的图像。必须为一个 4 维的 `float` 型张量。
 ```
 
-### Optional arguments descriptions ("attrs")
+在文档中，这些会被渲染成如下所示的 Markdown 格式
 
-The doc generator always describes the type for each attr and their default
-value, if any. You cannot override that with an equal sign because the
-description is very different in the C++ and Python generated docs.
+```
+image: 要进行调整尺寸的图像。是一个 `float` 型张量，必须为 4 维。
+```
 
-Phrase any additional attr description so that it flows well after the type
-and default value. The type and defaults are displayed first, and additional
-descriptions follow afterwards. Therefore, complete sentences are best.
+```
+image: 要进行调整尺寸的图像。是一个 4 维的`float` 型张量。
+```
 
-Here's an example from `image_ops.cc`:
+### 可选参数说明（“attrs”）
+
+文档生成器总是会描述所有 attr 的类型及其默认值（如果有的话）。由于 C++ 和 Python 生成的文档的描述互不相同，因此不能用等号来覆写。
+
+请在进行额外的 attr 描述时使用合适的语句，以便将它加在类型和默认值之后也能流畅阅读。首先展示类型和默认值，最后是附加说明。因此，最好使用完整的句子进行描述。
+
+这里有一个 `image_ops.cc` 中的例子：
 
     REGISTER_OP("DecodePng")
         .Input("contents: string")
@@ -655,8 +344,7 @@ Here's an example from `image_ops.cc`:
         .Doc(R"doc(
     Decode a PNG-encoded image to a uint8 or uint16 tensor.
 
-    The attr `channels` indicates the desired number of color channels for the
-    decoded image.
+    The attr `channels` indicates the desired number of color channels for the decoded image.
 
     Accepted values are:
 
@@ -665,23 +353,19 @@ Here's an example from `image_ops.cc`:
     *   3: output an RGB image.
     *   4: output an RGBA image.
 
-    If needed, the PNG-encoded image is transformed to match the requested
-    number of color channels.
+    If needed, the PNG-encoded image is transformed to match the requested number of color channels.
 
     contents: 0-D.  The PNG-encoded image.
     channels: Number of color channels for the decoded image.
     image: 3-D with shape `[height, width, channels]`.
     )doc");
 
-This generates the following Args section in
-`api_docs/python/tf/image/decode_png.md`:
+上述文本将在 `api_docs/python/tf/image/decode_png.md` 中生成如下的 Args 描述：
 
     #### Args:
 
-    * <b>`contents`</b>: A `Tensor` of type `string`. 0-D.  The PNG-encoded
-      image.
-    * <b>`channels`</b>: An optional `int`. Defaults to `0`. Number of color
-      channels for the decoded image.
-    * <b>`dtype`</b>: An optional `tf.DType` from: `tf.uint8,
-      tf.uint16`. Defaults to `tf.uint 8`.
-    * <b>`name`</b>: A name for the operation (optional).
+    * **`contents`**: A `Tensor` of type `string`. 0-D.  The PNG-encoded image.
+    * **`channels`**: An optional `int`. Defaults to `0`. Number of color channels for the decoded image.
+    * **`dtype`**: An optional `tf.DType` from: `tf.uint8, tf.uint16`. Defaults to `tf.uint 8`.
+    * **`name`**: A name for the operation (optional).
+    

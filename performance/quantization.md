@@ -1,226 +1,168 @@
-# How to Quantize Neural Networks with TensorFlow
+# 定点量化
 
-When modern neural networks were being developed, the biggest challenge was
-getting them to work at all! That meant that accuracy and speed during training
-were the top priorities. Using floating point arithmetic was the easiest way to
-preserve accuracy, and GPUs were well-equipped to accelerate those calculations,
-so it's natural that not much attention was paid to other numerical formats.
+量化技术计算并存储了更加紧凑的数字格式。[TensorFlow Lite](/mobile/tflite/) 增加了使用 8 位的定点量化表示。
 
-These days, we actually have a lot of models being deployed in commercial
-applications. The computation demands of training grow with the number of
-researchers, but the cycles needed for inference expand in proportion to users.
-That means pure inference efficiency has become a burning issue for a lot of
-teams.
+由于现代神经网络的挑战之一是进行高精度的优化，首先要做的是改善训练期的精度和速度。使用浮点数运算是保持精度的简单方法之一，同时 GPU 也被设计为能为这些运算进行加速。
 
-That is where quantization comes in. It's an umbrella term that covers a lot of
-different techniques to store numbers and perform calculations on them in more
-compact formats than 32-bit floating point. I am going to focus on eight-bit
-fixed point, for reasons I'll go into more detail on later.
+然而，随着越来越多的机器学习模型需要被部署到移动设备上，推理的效率已经成为了一个关键性问题。对于**训练期**的计算需求，随着在不同架构上训练的模型的数量增加而迅速增长；对于**推断**的计算需求，也随着用户数量的增加而成比例的增加。
 
-[TOC]
+## 量化的优势
 
-## Why does Quantization Work?
+使用 8 位定点量化表示的计算可以加速模型的运行速度，同时也能降低功耗。这点对于无法高效运行浮点计算的移动设备和嵌入式应用是非常有用的。比如物联网（IoT）和机器人设备。此外，在后端扩展这种支持、研究更低精度的神经网络还有很多机遇。
 
-Training neural networks is done by applying many tiny nudges to the weights,
-and these small increments typically need floating point precision to work
-(though there are research efforts to use quantized representations here too).
+### 更小的文件大小 {: .hide-from-toc}
 
-Taking a pre-trained model and running inference is very different. One of the
-magical qualities of deep networks is that they tend to cope very well with high
-levels of noise in their inputs. If you think about recognizing an object in a
-photo you've just taken, the network has to ignore all the CCD noise, lighting
-changes, and other non-essential differences between it and the training
-examples it's seen before, and focus on the important similarities instead. This
-ability means that they seem to treat low-precision calculations as just another
-source of noise, and still produce accurate results even with numerical formats
-that hold less information.
+神经网络的模型需要消耗大量的磁盘空间。举个例子，原始的 AlexNet 需要至少 200 MB 的空间来存储浮点格式的模型文件 —— 几乎全部用于模型数百万的权重。在权重间只有细微差异的表示中，简单的压缩格式效果不佳（如 Zip）。
 
-## Why Quantize?
+权重在所有层中都以数值形式出现。对每一层而言，权重倾向于分布在一定范围内。量化技术则可以通过存储每层中的最大和最小的权重，然后压缩每层权重的浮点值转换为表示在 256 个值范围内最接近真实实数的 8 位整数，从而达到压缩文件大小的目的。
 
-Neural network models can take up a lot of space on disk, with the original
-AlexNet being over 200 MB in float format for example. Almost all of that size
-is taken up with the weights for the neural connections, since there are often
-many millions of these in a single model. Because they're all slightly different
-floating point numbers, simple compression formats like zip don't compress them
-well. They are arranged in large layers though, and within each layer the
-weights tend to be normally distributed within a certain range, for example -3.0
-to 6.0.
+### 更快的推断 {: .hide-from-toc}
 
-The simplest motivation for quantization is to shrink file sizes by storing the
-min and max for each layer, and then compressing each float value to an
-eight-bit integer representing the closest real number in a linear set of 256
-within the range. For example with the -3.0 to 6.0 range, a 0 byte would
-represent -3.0, a 255 would stand for 6.0, and 128 would represent about 1.5.
-I'll go into the exact calculations later, since there's some subtleties, but
-this means you can get the benefit of a file on disk that's shrunk by 75%, and
-then convert back to float after loading so that your existing floating-point
-code can work without any changes.
+由于计算完全是在 8 位输入和输出上执行的，量化减少推理计算所需的计算资源。这在训练阶段需要引入更多浮点计算，但在推断期间则会加速很多。
 
-Another reason to quantize is to reduce the computational resources you need to
-do the inference calculations, by running them entirely with eight-bit inputs
-and outputs. This is a lot more difficult since it requires changes everywhere
-you do calculations, but offers a lot of potential rewards. Fetching eight-bit
-values only requires 25% of the memory bandwidth of floats, so you'll make much
-better use of caches and avoid bottlenecking on RAM access. You can also
-typically use SIMD operations that do many more operations per clock cycle. In
-some case you'll have a DSP chip available that can accelerate eight-bit
-calculations too, which can offer a lot of advantages.
+### 内存效率 {: .hide-from-toc}
 
-Moving calculations over to eight bit will help you run your models faster, and
-use less power (which is especially important on mobile devices). It also opens
-the door to a lot of embedded systems that can't run floating point code
-efficiently, so it can enable a lot of applications in the IoT world.
+对比浮点值而言，获取 8 位值只需要 25% 的内存和带宽，更加有效的避免了 RAM 访问的瓶颈。在很多情况下，神经网络的运行性能取决于内存的访问。使用八位定点值的权重与激活值所带来的提升是显著的。
 
-## Why Not Train in Lower Precision Directly?
+通常情况下，SIMD 操作能使在每个时钟周期内运行更多的操作。某些情况下，DSP 芯片还可以加速八位计算，最终获得大规模的加速。
 
-There have been some experiments training at lower bit depths, but the results
-seem to indicate that you need higher than eight bit to handle the back
-propagation and gradients. That makes implementing the training more
-complicated, and so starting with inference made sense. We also already have a
-lot of float models already that we use and know well, so being able to convert
-them directly is very convenient.
+## 定点量化技术
 
-## How Can You Quantize Your Models?
+我们的目标是要在训练和推断期间内，对于权重和激活值使用相同的精度，但是一个相当重要的区别是在前向和后向传播中，推断只使用了前向过程。所以当我们训练模型期间同时加入量化，就要确保前向过程的训练和推理的精度相匹配。
 
-TensorFlow has production-grade support for eight-bit calculations built in. It
-also has a process for converting many models trained in floating-point over to
-equivalent graphs using quantized calculations for inference. For example,
-here's how you can translate the latest GoogLeNet model into a version that uses
-eight-bit computations:
+为了尽量减少完全定点模型（权重与激活）的精度损耗，我们在训练中就使用量化。这样就模拟了模型在前向传播中的量化从而权重会倾向于其值在量化推断期间表现更好。后向传播使用量化后的权重、激活值及模型直接给估计器使用（见 [Bengio et al, 2013](https://arxiv.org/abs/1308.3432) ）。
 
-```sh
-curl -L "https://storage.googleapis.com/download.tensorflow.org/models/inception_v3_2016_08_28_frozen.pb.tar.gz" |
-  tar -C tensorflow/examples/label_image/data -xz
-bazel build tensorflow/tools/graph_transforms:transform_graph
-bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
-  --in_graph=tensorflow/examples/label_image/data/inception_v3_2016_08_28_frozen.pb \
-  --out_graph=/tmp/quantized_graph.pb \
-  --inputs=input \
-  --outputs=InceptionV3/Predictions/Reshape_1 \
-  --transforms='add_default_attributes strip_unused_nodes(type=float, shape="1,299,299,3")
-    remove_nodes(op=Identity, op=CheckNumerics) fold_constants(ignore_errors=true)
-    fold_batch_norms fold_old_batch_norms quantize_weights quantize_nodes
-    strip_unused_nodes sort_by_execution_order'
+此外，还需要在训练期间确定激活值的最小值和最大值。这是为了训练中使用量化时不费吹灰之力的将其转换为定点推断模型。从而消除了一个需要单独校准的步骤。
+
+## 使用 TensorFlow 进行量化训练
+
+TensorFlow 可以在训练模型的同时完成量化。由于训练时需要对梯度进行少量调整，所以仍然使用浮点值。为了保证在增加量化误差时候模型仍然是浮点值，@{$array_ops#Fake_quantization$fake quantization} 节点模拟了前向与后向量化的效果。
+
+由于很难将这些伪量化操作添加到所有模型所需的位置，有一个函数可以帮助我们重写整个训练图。从而创建一个伪量化的训练图，我们有：
+
+```python
+# 构建模型的前向传播
+loss = tf.losses.get_total_loss()
+
+# 调用训练重写，将模型内部的 FakeQuantization 节点以及 fold batchnorm 
+# 为训练期进行重写。这通常需要使用训练时的量化工具对浮点模型进行调优。
+# 当重头开始训练时，quant_delay 可以用来激活量化后的训练过程收敛到浮点图，
+# 从而有效的对模型进行调优
+tf.contrib.quantize.create_training_graph(quant_delay=2000000)
+
+# 如同往常一样调用后向传播
+optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+optimizer.minimize(loss)
 ```
 
-This will produce a new model that runs the same operations as the original, but
-with eight bit calculations internally, and all weights quantized as well. If
-you look at the file size, you'll see it's about a quarter of the original (23MB
-versus 91MB). You can still run this model using exactly the same inputs and
-outputs though, and you should get equivalent results. Here's an example:
+重写后的 **eval 图**与**训练图**并非平凡地等价，这是因为量化操作会影响 batchnorm 这一步骤。因此，我们为 **eval 图**增加了单独的重写步骤：
 
-```sh
-bazel build tensorflow/examples/label_image:label_image
-bazel-bin/tensorflow/examples/label_image/label_image \
---graph=/tmp/quantized_graph.pb \
+```Python
+# 构建 eval 图
+logits = tf.nn.softmax_cross_entropy_with_logits_v2(...)
+
+# 调用 eval 重写，在 FakeQuantization 节点重写图并使用 fold batchnorm 技术
+tf.contrib.quantize.create_eval_graph()
+
+# 将检查点和 eval 图原型保存并冻结到磁盘后提供给 TFLite
+with open(eval_graph_file, ‘w’) as f:
+  f.write(str(g.as_graph_def()))
+saver = tf.train.Saver()
+saver.save(sess, checkpoint_name)
 ```
 
-You'll see that this runs the newly-quantized graph, and outputs a very similar
-answer to the original.
+重写训练和评估图的方法是一个活跃的研究和实验领域。尽管重写和量化训练可能无法奏效或者不能提高所有模型的性能，但我们正在努力推广这些技术。
 
-You can run the same process on your own models saved out as GraphDefs, with the
-input and output names adapted to those your network requires. I recommend that
-you run them through the freeze_graph script first, to convert checkpoints into
-constants stored in the file.
+## 生成全量化模型
 
-## How Does the Quantization Process Work?
+前面演示的重写后的、重新计算求出参数后的 eval 图仅仅只是**模拟**了量化这一过程。为了从训练的量化模型生成实际的定点运算，还需要将其转换为定点内核。TensorFlow Lite 支持从 `create_eval_graph` 生成图形并进行此转换。
 
-We've implemented quantization by writing equivalent eight-bit versions of
-operations that are commonly used during inference. These include convolution,
-matrix multiplication, activation functions, pooling operations and
-concatenation. The conversion script first replaces all the individual ops it
-knows about with quantized equivalents. These are small sub-graphs that have
-conversion functions before and after to move the data between float and
-eight-bit. Below is an example of what they look like. First here's the original
-Relu operation, with float inputs and outputs:
+首先，通过 TensorFlow Lite 工具链创建一个冻结的图：
 
-![Relu Diagram](https://www.tensorflow.org/images/quantization0.png)
-
-Then, this is the equivalent converted subgraph, still with float inputs and
-outputs, but with internal conversions so the calculations are done in eight
-bit.
-
-![Converted Diagram](https://www.tensorflow.org/images/quantization1.png)
-
-The min and max operations actually look at the values in the input float
-tensor, and then feeds them into the Dequantize operation that converts the
-tensor into eight-bits. There are more details on how the quantized representation
-works later on.
-
-Once the individual operations have been converted, the next stage is to remove
-unnecessary conversions to and from float. If there are consecutive sequences of
-operations that all have float equivalents, then there will be a lot of adjacent
-Dequantize/Quantize ops. This stage spots that pattern, recognizes that they
-cancel each other out, and removes them, like this:
-
-![Stripping Diagram](https://www.tensorflow.org/images/quantization2.png)
-
-Applied on a large scale to models where all of the operations have quantized
-equivalents, this gives a graph where all of the tensor calculations are done in
-eight bit, without having to convert to float.
-
-## What Representation is Used for Quantized Tensors?
-
-We approach converting floating-point arrays of numbers into eight-bit
-representations as a compression problem. We know that the weights and
-activation tensors in trained neural network models tend to have values that are
-distributed across comparatively small ranges (for example you might have -15 to
-+15 for weights, -500 to 1000 for activations on an image model, though the
-exact numbers will vary). We also know from experiment that neural nets tend to
-be very robust in the face of noise, and so the noise-like error produced by
-quantizing down to a small set of values will not hurt the precision of the
-overall results very much. We also want to pick a representation that's easy to
-perform calculations on, especially the large matrix multiplications that form
-the bulk of the work that's needed to run a model.
-
-These led us to pick a representation that has two floats to store the overall
-minimum and maximum values that are represented by the lowest and highest
-quantized value. Each entry in the quantized array represents a float value in
-that range, distributed linearly between the minimum and maximum. For example,
-if we have minimum = -10.0, and maximum = 30.0f, and an eight-bit array, here's
-what the quantized values represent:
-
-```
-Quantized | Float
---------- | -----
-0         | -10.0
-255       | 30.0
-128       | 10.0
+```Shell
+bazel build tensorflow/python/tools:freeze_graph && \
+  bazel-bin/tensorflow/python/tools/freeze_graph \
+  --input_graph=eval_graph_def.pb \
+  --input_checkpoint=checkpoint \
+  --output_graph=frozen_eval_graph.pb --output_node_names=outputs
 ```
 
-The advantages of this format are that it can represent arbitrary magnitudes of
-ranges, they don't have to be symmetrical, it can represent signed and unsigned
-values, and the linear spread makes doing multiplications straightforward. There
-are alternatives like [Song Han's code books](http://arxiv.org/pdf/1510.00149.pdf)
-that can use lower bit depths by non-linearly distributing the float values
-across the representation, but these tend to be more expensive to calculate on.
+然后将输出结果提供给 TensorFlow Lite 优化转换器（TOCO）以获得全量化的 TensorFLow Lite 模型：
 
-The advantage of having a strong and clear definition of the quantized format is
-that it's always possible to convert back and forth from float for operations
-that aren't quantization-ready, or to inspect the tensors for debugging
-purposes. One implementation detail in TensorFlow that we're hoping to improve
-in the future is that the minimum and maximum float values need to be passed as
-separate tensors to the one holding the quantized values, so graphs can get a
-bit dense!
+```Shell
+bazel build tensorflow/contrib/lite/toco:toco && \
+  ./bazel-bin/third_party/tensorflow/contrib/lite/toco/toco \
+  --input_file=frozen_eval_graph.pb \
+  --output_file=tflite_model.tflite \
+  --input_format=TENSORFLOW_GRAPHDEF --output_format=TFLITE \
+  --inference_type=QUANTIZED_UINT8 \
+  --input_shape="1,224, 224,3" \
+  --input_array=input \
+  --output_array=outputs \
+  --std_value=127.5 --mean_value=127.5
+```
 
-The nice thing about the minimum and maximum ranges is that they can often be
-pre-calculated. Weight parameters are constants known at load time, so their
-ranges can also be stored as constants. We often know the ranges for inputs (for
-examples images are usually RGB values in the range 0.0 to 255.0), and many
-activation functions have known ranges too. This can avoid having to analyze the
-outputs of an operation to determine the range, which we need to do for math ops
-like convolution or matrix multiplication which produce 32-bit accumulated
-results from 8-bit inputs.
+请查看 `tf.contrib.quantize` 和 [TensorFlow Lite](/mobile/tflite/) 文档。
 
-## What's Next?
+## 量化模型的精度
 
-We've found that we can get extremely good performance on mobile and embedded
-devices by using eight-bit arithmetic rather than floating-point. You can see
-the framework we use to optimize matrix multiplications at
-[gemmlowp](https://github.com/google/gemmlowp). We still need to apply all the
-lessons we've learned to the TensorFlow ops to get maximum performance on
-mobile, but we're actively working on that. Right now, this quantized
-implementation is a reasonably fast and accurate reference implementation that
-we're hoping will enable wider support for our eight-bit models on a wider
-variety of devices. We also hope that this demonstration will encourage the
-community to explore what's possible with low-precision neural networks.
+定点形式的 [MobileNet](https://arxiv.org/abs/1704.0486) 模型由八位权重与激活方式发布。通过使用重写器，模型实现了表 1 中列出的 Top-1 精度。作为比较，这里针对同样的模型列出了浮点精度。用于生成这些模型的代码可以连同所有预训练的 [mobilenet_v1 模型](https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet_v1.md)一起使用。
+
+<figure>
+  <table>
+    <tr>
+      <th>图片大小</th>
+      <th>深度</th>
+      <th>Top-1 精度:<br>浮点值</th>
+      <th>Top-1 精度:<br>定点：8 位权重及激活值</th>
+    </tr>
+    <tr><td>128</td><td>0.25</td><td>0.415</td><td>0.399</td></tr>
+    <tr><td>128</td><td>0.5</td><td>0.563</td><td>0.549</td></tr>
+    <tr><td>128</td><td>0.75</td><td>0.621</td><td>0.598</td></tr>
+    <tr><td>128</td><td>1</td><td>0.652</td><td>0.64</td></tr>
+    <tr><td>160</td><td>0.25</td><td>0.455</td><td>0.435</td></tr>
+    <tr><td>160</td><td>0.5</td><td>0.591</td><td>0.577</td></tr>
+    <tr><td>160</td><td>0.75</td><td>0.653</td><td>0.639</td></tr>
+    <tr><td>160</td><td>1</td><td>0.68</td><td>0.673</td></tr>
+    <tr><td>192</td><td>0.25</td><td>0.477</td><td>0.458</td></tr>
+    <tr><td>192</td><td>0.5</td><td>0.617</td><td>0.604</td></tr>
+    <tr><td>192</td><td>0.75</td><td>0.672</td><td>0.662</td></tr>
+    <tr><td>192</td><td>1</td><td>0.7</td><td>0.69</td></tr>
+    <tr><td>224</td><td>0.25</td><td>0.498</td><td>0.482</td></tr>
+    <tr><td>224</td><td>0.5</td><td>0.633</td><td>0.622</td></tr>
+    <tr><td>224</td><td>0.75</td><td>0.684</td><td>0.679</td></tr>
+    <tr><td>224</td><td>1</td><td>0.709</td><td>0.697</td></tr>
+  </table>
+  <figcaption>
+    <b>表 1</b>：MobileNet 在 Imagenet 验证集上的 Top-1 精度
+  </figcaption>
+</figure>
+
+## 量化张量的表示
+
+作为压缩，TensorFlow 会将浮点数数组转换为 8 位定点表示。由于训练好的神经网络中，权重和激活张量的值更倾向于分布在相对范围较小之内（例如，权重为 -15 到 +15 或者 -500 到 +100 用于图像模型的激活函数）。由于神经网络倾向于鲁棒地处理噪声，量化所引入的误差在整体结果的精度总是保持在可接受的阈值之内。选择的表示形式必须具备快速执行计算的能力，尤其是在运行模型时组成大量计算的大型矩阵乘法。
+
+这种具有两个浮点数的表示形式存储了整体值中最小和最大值所对应的最低和最高的量化值。每个量化值数组的实例表示了一个浮点数的范围，线性的分布在最小值和最大值之间。举个例子，最小值为 -10.0 和 最大值为 30.0f 及一个八位数组，其量化值的表示如下：
+
+<figure>
+  <table>
+    <tr><th>量化的</th><th>浮点的</th></tr>
+    <tr><td>0</td><td>-10.0</td></tr>
+    <tr><td>128</td><td>10.0</td></tr>
+    <tr><td>255</td><td>30.0</td></tr>
+  </table>
+  <figcaption>
+    <b>表 2</b>：量化值的平均的例子
+  </figcaption>
+</figure>
+
+这种表示形式的优势在于：
+
+* 有效的表示了任意范围的大小
+* 值无需对称
+* 表示形式同时表达了有符号数和无符号数
+* 其线性展开使得乘法相对简单。
+
+其他备用的技术通过使用整个表示中非线性地分配浮点值作为低位的深度，然而这使得计算时间方面相对更加昂贵（见 Han et al.[2016](https://arxiv.org/abs/1510.00149) ）。
+
+对量化格式有清晰定义的好处在于，对于未准备好量化的操作，或者为了调试而检查张量，始终可以从定点到浮点之间来回转换。
